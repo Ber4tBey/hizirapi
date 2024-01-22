@@ -735,8 +735,8 @@ async def get_contact(request: Request):
                     if iphone not in [item['phone'] for item in phonenumbers]:
                         phonenumbers.append({"name": i['name'], "phone": iphone})
 
-            cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
-            connection.commit()
+                cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
+                connection.commit()
 
             return phonenumbers
         else:
