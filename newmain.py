@@ -465,7 +465,17 @@ async def upload_file(
         if user:
             connection = get_db_connection()
             cursor = connection.cursor()
-            
+
+            # Check if the user has an existing photo
+            old_photo = user[9]  # Assuming the photo column is at index 5, adjust if needed
+            print(old_photo)
+            if old_photo:
+                old_photo_path = os.path.join(upload_folder, old_photo)
+                
+                # Remove the old photo from the uploads folder
+                if os.path.exists(old_photo_path):
+                    os.remove(old_photo_path)
+
             if not is_image(file.filename):
                 raise HTTPException(status_code=400, detail="Sadece resim dosyaları desteklenmektedir.")
 
