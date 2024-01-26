@@ -502,7 +502,7 @@ async def upload_file(
             cursor.execute('UPDATE usersinfo SET photo = ? WHERE phone = ?', (nam, user[4]))
             connection.commit()
 
-            return {"status": "True"}
+            return {"status": "True" , "photo" : nam}
         else:
             return {"status": "False", "error": "Giriş başarısız."}
     else:
