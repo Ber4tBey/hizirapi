@@ -395,6 +395,9 @@ async def register(request: Request):
     kangrup = data.get("kangrup",None)
     profile = data.get("profile",None)
 
+    name = name.title()
+    surname = surname.title()
+
 
 
     if profile == None:
@@ -467,7 +470,7 @@ async def upload_file(
             cursor = connection.cursor()
 
             # Check if the user has an existing photo
-            old_photo = user[9]  # Assuming the photo column is at index 5, adjust if needed
+            old_photo = user[9]  # Assuming the photo column is at index 9, adjust if needed
             print(old_photo)
             if old_photo:
                 old_photo_path = os.path.join(upload_folder, old_photo)
@@ -492,8 +495,9 @@ async def upload_file(
                 nam = f"{user[1]}_{user[2]}_{random_number}.jpg"
                 file_path = os.path.join(upload_folder, nam)
 
-            with open(file_path, "wb") as f:
-                f.write(file.file.read())
+            # Gelen resmi Pillow kullanarak JPG formatına çevir
+            image = Image.open(file.file)
+            image.save(file_path, "JPEG")
 
             cursor.execute('UPDATE users SET photo = ? WHERE phone = ?', (nam, user[4]))
             cursor.execute('UPDATE usersinfo SET photo = ? WHERE phone = ?', (nam, user[4]))
@@ -514,9 +518,15 @@ def is_image(filename):
 
 @app.get("/profilephotos/{filename}")
 async def read_file(filename: str):
-    # Yüklü resmi görüntüle
     file_path = os.path.join(upload_folder, filename)
-    return FileResponse(file_path, media_type="image/jpeg")
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    else:
+        # Return a default image if the file doesn't exist
+        default_image_path = os.path.join(upload_folder, "default.jpeg")
+        return FileResponse(default_image_path, media_type="image/jpeg")
 
 @app.get("/login")
 def login(request: Request):
@@ -559,6 +569,7 @@ def login(request: Request):
         "role" : user[6],
         "tcnumber" : user[7],
         "dogumyil": user[8],
+        "dogumyil": user[9],
 
     }
       else:
@@ -814,7 +825,7 @@ async def get_contact(request: Request):
                     if check:
                         # Eğer aynı telefon numarası daha önce eklenmemişse listeye ekle
                         if iphone not in [item['phone'] for item in phonenumbers]:
-                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4]})
+                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7]})
 
                 # Tüm kayıtları tek seferde güncelle
             cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
@@ -1584,12 +1595,12 @@ def getusers(request: Request):
                 params = {}
 
                 if name:
-                    query += " AND name = :name"
-                    params["name"] = name
+                    query += " AND LOWER(name) = LOWER(:name)"
+                    params["name"] = name.lower().strip()
 
                 if surname:
-                    query += " AND surname = :surname"
-                    params["surname"] = surname
+                    query += " AND LOWER(surname) = LOWER(:surname)"
+                    params["surname"] = surname.lower().strip()
 
                 if tckimlik:
                     query += " AND tckimlik = :tckimlik"
@@ -1600,6 +1611,8 @@ def getusers(request: Request):
                     params["phone"] = phone
 
                 cursor.execute(query, params)
+                print(query)
+                print(params)
                 users = cursor.fetchall()
 
                 userlist = []
@@ -1676,4 +1689,4 @@ def generate_random_code():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    uvicorn.run(app, host="0.0.0.0", port=80 )
