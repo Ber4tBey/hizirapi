@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request,Header,Form,HTTPException
+from fastapi import FastAPI, Request,Header,Form,File, UploadFile, HTTPException
 import sqlite3
 import threading
 import json
@@ -18,6 +18,13 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import os
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+
+
 
 def generate_family_code():
     characters = string.ascii_letters + string.digits  
@@ -286,7 +293,7 @@ def init_db():
 
 
 def beniyiyimclear():
-    
+   
     connection = get_db_connection()
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM usersinfo")
@@ -325,10 +332,38 @@ def phoneduzelt(phone):
             phone = "+90" + chg
         elif phone.startswith("90"):
             phone = "+" + phone
+        elif phone.startswith("+90") or phone.startswith("+"):
+           phone = phone
         else:
             phone = "+90" + phone
 
     return phone
+
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Resim dosyalarını depolamak için bir klasör oluştur
+upload_folder = "uploads"
+os.makedirs(upload_folder, exist_ok=True)
+
+# Ana dizine "uploads" klasörüne erişim sağlama
+app.mount("/uploads", StaticFiles(directory=upload_folder), name="uploads")
+
+
+def is_image(filename):
+    # Desteklenen resim dosya uzantılarını kontrol etme
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+
 
 @app.on_event("startup")
 def startup_event():
@@ -339,13 +374,14 @@ def shutdown_event():
     close_db_connection()
 
 @app.get("/")
-def root(request:Request):  
+def root(request:Request):
+ 
     return {"message" : "Asena Technology Hoşgeldiniz. Sürüm v1.1"}
 
 @app.post("/register")
 async def register(request: Request):
     data = await request.json()
- 
+
     seckey = "DKOEFE-232320-AWDWOP"
     key = data.get('key', None)
     phone = data.get('phone', None)
@@ -357,6 +393,9 @@ async def register(request: Request):
     dogumyil = data.get("dogumyil",None)
     kangrup = data.get("kangrup",None)
     profile = data.get("profile",None)
+
+    name = name.title()
+    surname = surname.title()
 
 
 
@@ -370,7 +409,7 @@ async def register(request: Request):
 
         phone = phoneduzelt(phone)
         if key == seckey:
-            
+
             connection = get_db_connection()
             cursor = connection.cursor()
 
@@ -387,8 +426,8 @@ async def register(request: Request):
             user = cursor.fetchone()
             if user:
                 return {"status": "False", "error": "Bu Tc Kimlik Numarası Zaten Kullanılıyor!"}
-            
-      
+
+
 
             cursor.execute('''
                     INSERT INTO users (name, surname, email, phone, password,role,tcnumber,dogumyil,photo,kangrup)
@@ -409,30 +448,84 @@ async def register(request: Request):
     else:
         return {"status": "False", "error": "Enter the required parameters."}
 
+# 6 haneli random rakam oluşturan fonksiyon
+def generate_random_number():
+    return str(random.randint(100000, 999999))
+
+# Uploads klasöründeki dosya isimlerini kontrol eden fonksiyon
+def is_file_exists(file_path: str):
+    return os.path.exists(file_path)
 
 @app.post("/setphoto")
-async def setphoto(request : Request):
-   data = await request.json()
-   username = data.get("email",None)
-   password = data.get("password",None)
-   photo = data.get("photo",None)
-   if username and password and photo is not None:
-      user = authenticate_user(username, password)
-      if user:
-       connection = get_db_connection()
-       cursor = connection.cursor()
-       cursor.execute('UPDATE users SET photo = ? WHERE phone = ?', (photo, user[4]))
-       cursor.execute('UPDATE usersinfo SET photo = ? WHERE phone = ?', (photo, user[4]))
-       connection.commit()
+async def upload_file(
+    username: str = Form(...),
+    password: str = Form(...),
+    file: UploadFile = File(...),
+):
+    if username and password is not None:
+        user = authenticate_user(username, password)
+        if user:
+            connection = get_db_connection()
+            cursor = connection.cursor()
 
-       return {"status" : "True"}
-      else:
-       return {"status": "False" , "error" : "Giriş başarısız."}
-   else:
-      return {"status": "False", "error": "Enter the required parameters."}
+            # Check if the user has an existing photo
+            old_photo = user[9]  # Assuming the photo column is at index 9, adjust if needed
+            
+            if old_photo:
+                old_photo_path = os.path.join(upload_folder, old_photo)
+                
+                # Remove the old photo from the uploads folder
+                if os.path.exists(old_photo_path):
+                    os.remove(old_photo_path)
+
+            if not is_image(file.filename):
+                raise HTTPException(status_code=400, detail="Sadece resim dosyaları desteklenmektedir.")
+
+            # 6 haneli random rakamları oluştur
+            random_number = generate_random_number()
+
+            # Dosya adını oluştur
+            nam = f"{user[1]}_{user[2]}_{random_number}.jpg"
+            file_path = os.path.join(upload_folder, nam)
+
+            # Eğer aynı isimde bir dosya varsa, random sayıyı güncelle
+            while is_file_exists(file_path):
+                random_number = generate_random_number()
+                nam = f"{user[1]}_{user[2]}_{random_number}.jpg"
+                file_path = os.path.join(upload_folder, nam)
+
+            # Gelen resmi Pillow kullanarak JPG formatına çevir
+            image = Image.open(file.file)
+            image.save(file_path, "JPEG")
+
+            cursor.execute('UPDATE users SET photo = ? WHERE phone = ?', (nam, user[4]))
+            cursor.execute('UPDATE usersinfo SET photo = ? WHERE phone = ?', (nam, user[4]))
+            connection.commit()
+
+            return {"status": "True"}
+        else:
+            return {"status": "False", "error": "Giriş başarısız."}
+    else:
+        return {"status": "False", "error": "Enter the required parameters."}
 
 
+def is_image(filename):
+    # Desteklenen resim dosya uzantılarını kontrol etme
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
+
+@app.get("/profilephotos/{filename}")
+async def read_file(filename: str):
+    file_path = os.path.join(upload_folder, filename)
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    else:
+        # Return a default image if the file doesn't exist
+        default_image_path = os.path.join(upload_folder, "default.jpeg")
+        return FileResponse(default_image_path, media_type="image/jpeg")
 
 @app.get("/login")
 def login(request: Request):
@@ -475,7 +568,8 @@ def login(request: Request):
         "role" : user[6],
         "tcnumber" : user[7],
         "dogumyil": user[8],
-        "photo": user[9]
+        "photo": user[9],
+
     }
       else:
        data = {
@@ -613,7 +707,7 @@ def yardimlist(request: Request):
     users = cursor.fetchall()
 
     for i in users:
-
+     
        for item in json.loads(i[3]):
          yardim_verileri.append(item)
     data = {"status": "True", "data": yardim_verileri}
@@ -644,7 +738,7 @@ def addcontact(request: Request):
         check = cursor.fetchone()
         cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{phone2}'")
         notuser = cursor.fetchone() ##kullanıcının bilgilerini aldın
-        
+       
 
         if not check:
            return {"status" : "False" , "error" : "Kullanıcı halihazırda uygulamanın üyesi değil."}
@@ -677,7 +771,7 @@ def addcontact(request: Request):
     else:
      return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
 
-@app.get("/getcontact")
+"""@app.get("/getcontact")
 def getcontact(request : Request):
  args = request.query_params
  username = args.get("username",None)
@@ -702,7 +796,49 @@ def getcontact(request : Request):
     else:
        return {"status": "False", "error": "Kullanıcı adı veya şifre hatalı."}
  else:
-    return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
+    return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}"""
+ 
+
+@app.post("/getcontact")
+async def get_contact(request: Request):
+    data = await request.json()
+    username = data.get("username", None)
+    password = data.get("password", None)
+    phone = data.get("phone", None)
+
+    if username and password and phone is not None:
+        user = authenticate_user(username, password)
+        if user:
+            phone = json.loads(phone)
+            phonenumbers = []
+
+            connection = get_db_connection()
+            cursor = connection.cursor()
+
+            
+            for i in phone:
+                    iphone = phoneduzelt(i['phone'])
+                    cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{iphone}'")
+                    check = cursor.fetchone()
+
+                    if check:
+                        # Eğer aynı telefon numarası daha önce eklenmemişse listeye ekle
+                        if iphone not in [item['phone'] for item in phonenumbers]:
+                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7]})
+
+                # Tüm kayıtları tek seferde güncelle
+            cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
+            connection.commit()
+
+            return phonenumbers
+            
+                
+        else:
+            return {"status": "False", "error": "Kullanıcı adı veya şifre hatalı."}
+    else:
+        return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
+
+
 
 @app.get("/removecontact")
 def removecontact(request: Request):
@@ -763,14 +899,14 @@ def setstatus(request : Request):
        users = cursor.fetchone()
        loaded = users[2]
        notification_liste = []
-       for i in loaded:
+       try:  
+        for i in loaded:
           notification_liste.append(i['notification'])
-       
+       except:
+        pass
        if status == "help" or status == "nice" or status == "empty" or status == "danger":
 
                 if notification_liste:
-
-
                  if type(notification_liste) == list:
 
                    for i in notification_liste:
@@ -1413,24 +1549,24 @@ def giverole(request : Request):
    username = args.get("username",None)
    password = args.get("password",None)
    phone = args.get("phone",None)
-
+   key = args.get("key",None)
    role = args.get("role",None)
    if username and password and role and phone != None:
 
       phone = phoneduzelt(phone)
       user = authenticate_user(username,password)
       if user:
-        if role == "admin" or "sar":
-         if user[6] == "admin":
+        if key == "ber4tbeyselam":
+         
             connection = get_db_connection()
             cursor = connection.cursor()
             cursor.execute('UPDATE users SET role = ? WHERE phone = ?', (role, phone))
             connection.commit()
             return {"status": "True"}
-         else:
-            return {"status" : "False" , "error" : "Yetkiniz Yok!"}
+         
+            
         else:
-           return {"status" :  "False" , "error" : "Geçerli bir rol giriniz. admin/sar"}
+           return {"status" :  "False" , "error" : "Key hatalı"}
       else:
          return {"status" : "False", "error" : "Kullanıcı adı veya şifre hatalı!"}
    else:
@@ -1446,7 +1582,7 @@ def getusers(request: Request):
     tckimlik = args.get("tckimlik")
     phone = args.get("phone", None)
     if phone is not None:
-        phone = phoneduzelt(phone)
+     phone = phoneduzelt(phone)
 
     if username and password is not None:
         user = authenticate_user(username, password)
@@ -1459,30 +1595,29 @@ def getusers(request: Request):
 
                 if name:
                     query += " AND LOWER(name) = LOWER(:name)"
-                    params["name"] = name
+                    params["name"] = name.lower().strip()
 
                 if surname:
                     query += " AND LOWER(surname) = LOWER(:surname)"
-                    params["surname"] = surname
+                    params["surname"] = surname.lower().strip()
 
                 if tckimlik:
-                    query += " AND LOWER(tckimlik) = LOWER(:tckimlik)"
+                    query += " AND tckimlik = :tckimlik"
                     params["tckimlik"] = tckimlik
 
                 if phone:
-                    query += " AND LOWER(phone) = LOWER(:phone)"
+                    query += " AND phone = :phone"
                     params["phone"] = phone
 
                 cursor.execute(query, params)
+          
                 users = cursor.fetchall()
 
                 userlist = []
-              
                 for i in users:
-                    data = {"name": i[9], "surname": i[10], "tcnumber": i[11], "kangrup": i[12],
-                            "phone": i[1], "rehber": i[2], "durum": i[4], "durumtime": i[5], "ailecode": i[6], "photo": i[7]}
-                    userlist.append(data)
-                return {"status": "True", "data": userlist}
+                   data = {"name" : i[9] , "surname": i[10] ,"tcnumber": i[11], "kangrup" : i[12],"phone": i[1] , "rehber" : i[2] , "durum" : i[4] , "durumtime" : i[5], "ailecode" : i[6] , "photo" : i[7]}
+                   userlist.append(data)
+                return {"status" : "True", "data" : userlist}
             else:
                 return {"status": "False", "error": "Yetkiniz Yok!"}
         else:
@@ -1552,4 +1687,4 @@ def generate_random_code():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=80 )
