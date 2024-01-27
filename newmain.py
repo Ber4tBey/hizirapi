@@ -594,7 +594,7 @@ def searchuser(request : Request):
        cursor.execute('SELECT * FROM usersinfo WHERE phone = ?', (userid,))
        users = cursor.fetchone()
        if users:
-        return {"status" : "True" , "photo" : users[7]}
+        return {"status" : "True" , "photo" : users[7] , "kan" : user[12]}
        else:
           return {"status" : "False" , "error" : "Kullanıcı bulunamadı."}  
       else:
@@ -1138,7 +1138,8 @@ def joinfamily(request : Request):
                "name": user[1],
                "surname" : user[2],
                "tcnumber" : user[7],
-               "dogumyil" : user[8]
+               "dogumyil" : user[8],
+            
             }
             json_data.append(json_users)
             cursor.execute('UPDATE families SET users = ? WHERE code = ?', (json.dumps(json_data), code))
