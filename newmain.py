@@ -826,7 +826,7 @@ async def get_contact(request: Request):
                     if check:
                         # Eğer aynı telefon numarası daha önce eklenmemişse listeye ekle
                         if iphone not in [item['phone'] for item in phonenumbers]:
-                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "fullname" : user[1] + " " + user[2]})
+                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "fullname" : check[9] + " " + check[10]})
 
                 # Tüm kayıtları tek seferde güncelle
             cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
