@@ -594,7 +594,7 @@ def searchuser(request : Request):
        cursor.execute('SELECT * FROM usersinfo WHERE phone = ?', (userid,))
        users = cursor.fetchone()
        if users:
-        return {"status" : "True" , "photo" : users[7] , "kan" : users[12] , "status": users[4]}
+        return {"status" : "True" , "photo" : users[7] , "kan" : users[12] , "durum": users[4]}
        else:
           return {"status" : "False" , "error" : "Kullanıcı bulunamadı."}  
       else:
