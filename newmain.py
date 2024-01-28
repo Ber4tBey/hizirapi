@@ -594,13 +594,15 @@ def searchuser(request : Request):
        cursor.execute('SELECT * FROM usersinfo WHERE phone = ?', (userid,))
        users = cursor.fetchone()
        if users:
-        return {"status" : "True" , "photo" : users[7] , "kan" : user[12]}
+        return {"status" : "True" , "photo" : users[7] , "kan" : users[12]}
        else:
           return {"status" : "False" , "error" : "Kullanıcı bulunamadı."}  
       else:
        return {"status": "False" , "error" : "Giriş başarısız."}
    else:
-      return {"status": "False", "error": "Enter the required parameters."}  
+      return {"status": "False", "error": "Enter the required parameters."} 
+   
+
 @app.get("/addhelp")
 def addhelp(request: Request):
   args = request.query_params
