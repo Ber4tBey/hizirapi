@@ -826,7 +826,7 @@ async def get_contact(request: Request):
                     if check:
                         # Eğer aynı telefon numarası daha önce eklenmemişse listeye ekle
                         if iphone not in [item['phone'] for item in phonenumbers]:
-                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "name" : user[9] + " " + user[10]})
+                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "fullname" : user[1] + " " + user[2]})
 
                 # Tüm kayıtları tek seferde güncelle
             cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
@@ -1690,4 +1690,4 @@ def generate_random_code():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=80 )
+    uvicorn.run(app, host="0.0.0.0", port=8000 )
