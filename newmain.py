@@ -22,8 +22,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
-
+import io
 
 
 def generate_family_code():
@@ -1391,13 +1390,30 @@ def removefamily(request : Request):
 
 ############################## BİNA PLANLARI #############################
 
+def base64_to_image(base64_string, output_path="output_image.jpg"):
+    try:
+        # Base64 string'i resme çevir
+        decoded_data = base64.b64decode(base64_string)
+        image = Image.open(io.BytesIO(decoded_data))
+        
+        # Resmi kaydet (Opsiyonel)
+        image.save("./plans/"+output_path, format="PNG")
+
+        return True
+    except Exception as e:
+        # Hata durumunda "Resim Bozuk" mesajı döndür
+        print(f"Hata: {e}")
+        return False
+    
+
 @app.post("/addbina")
 async def addplan(request: Request):
    data = await request.json()
    username = data.get("email",None)
    password = data.get("password",None)
-   binaresim = data.get("plan",None)
-   if username and password and binaresim != None:
+   plan = data.get("bina",None)
+   name = data.get("name",None)
+   if username and password and plan and name != None:
       user = authenticate_user(username,password)
       if user:
          connection = get_db_connection()
@@ -1406,25 +1422,52 @@ async def addplan(request: Request):
          usersinfo = cursor.fetchone()
          ailecode = usersinfo[6] 
          if ailecode is not None:
-             cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
-             familylist = cursor.fetchone()
-             json_data = (familylist[6])
-             cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (binaresim, ailecode))
-             connection.commit()
-             return {"status" : "True", "message": "Başarılı!"}
+             name = name + "_" + ailecode
+             result = base64_to_image(plan,name+".jpg")
+             if result:
+              cursor.execute(f"SELECT * FROM families WHERE code = '{ailecode}'", )
+              familyinfo = cursor.fetchone()
+              
+              json_data = json.loads(familyinfo[6])
+              for i in json_data:
+                 if i == name+".jpg":
+                    return {"status" : "False", "error" : "Aynı isimde bina planı eklenemez."}
+              json_data.append(name+".jpg")
+              cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(json_data), ailecode))
+              connection.commit()
+              return {"status" : "True", "message": "Başarılı!"}
+             else:
+              return {"status" : "False" , "error" : "Fotoğraf uygun formatta değil."}
          else:
              return {"status" : "False", "error" : "Henüz bir ailede değilsiniz."}       
       else:
          return {"status": "False", "error": "Giriş başarısız."}
    else:
      return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
+   
+
+     
+@app.get("/planphoto/{filename}")
+async def read_file(filename: str):
+    file_path = os.path.join("./plans", filename)
+
+    
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    else:
+      
+        default_image_path = os.path.join(upload_folder, "default.jpeg")
+        return FileResponse(default_image_path, media_type="image/jpeg")
+    
+
+    
 
 @app.get("/removebina")
 def addplan(request: Request):
    args = request.query_params
    username = args.get("email",None)
    password = args.get("password",None)
-
+   name = args.get("name",None)
    if username and password != None:
       user = authenticate_user(username,password)
       if user:
@@ -1434,10 +1477,15 @@ def addplan(request: Request):
          usersinfo = cursor.fetchone()
          ailecode = usersinfo[6] 
          if ailecode is not None:
+             name = name + "_" + ailecode
              cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
              familylist = cursor.fetchone()
-             json_data = (familylist[6])
-             cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', ("", ailecode))
+             json_data = json.loads(familylist[6])
+             my_list = [item for item in json_data if name in json_data]
+             print(my_list)
+             if os.path.exists("./plans/"+name+".jpg"):     
+              os.remove("./plans/"+name+".jpg")
+             cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(my_list), ailecode))
              connection.commit()
              return {"status" : "True", "message": "Başarılı!"}
          else:
