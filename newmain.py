@@ -1420,7 +1420,7 @@ async def addplan(username: str = Form(...),
                 
                 # Check if the file already exists
                 if os.path.exists(file_path):
-                    return {"status": "False", "error": "Aynı isimde bina planı eklenemez."}
+                    os.remove(file_path)
 
                 # Save the image to the plans folder
                 save_image(file, file_path)
