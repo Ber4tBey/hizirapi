@@ -1093,7 +1093,7 @@ def createfamily(request: Request):
             cursor.execute('''
                 INSERT INTO families (phone,code, users, name,childs,binaplan,adres,binaname)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (phonenum,new_code,json.dumps([json_users]),name,json.dumps([]),"",adres,binaname))
+            ''', (phonenum,new_code,json.dumps([json_users]),name,json.dumps([]),json.dumps([]),adres,binaname))
             connection.commit()
 
             cursor.execute('UPDATE usersinfo SET ailecode = ? WHERE phone = ?', (new_code, phonenum))
@@ -1389,6 +1389,9 @@ def removefamily(request : Request):
      return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."} 
 
 ############################## BİNA PLANLARI #############################
+
+
+    
 
 UPLOAD_FOLDER = "plans/"  # Plans klasörü
 
