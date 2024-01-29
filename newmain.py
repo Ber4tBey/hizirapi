@@ -1390,60 +1390,55 @@ def removefamily(request : Request):
 
 ############################## BİNA PLANLARI #############################
 
-def base64_to_image(base64_string, output_path="output_image.jpg"):
-    try:
-        # Base64 string'i resme çevir
-        decoded_data = base64.b64decode(base64_string)
-        image = Image.open(io.BytesIO(decoded_data))
-        
-        # Resmi kaydet (Opsiyonel)
-        image.save("./plans/"+output_path, format="PNG")
+UPLOAD_FOLDER = "plans/"  # Plans klasörü
 
-        return True
-    except Exception as e:
-        # Hata durumunda "Resim Bozuk" mesajı döndür
-        print(f"Hata: {e}")
-        return False
-    
+def save_image(file, file_path):
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
 
 @app.post("/addbina")
-async def addplan(request: Request):
-   data = await request.json()
-   username = data.get("email",None)
-   password = data.get("password",None)
-   plan = data.get("bina",None)
-   name = data.get("name",None)
-   if username and password and plan and name != None:
-      user = authenticate_user(username,password)
-      if user:
-         connection = get_db_connection()
-         cursor = connection.cursor()
-         cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{user[4]}'", )
-         usersinfo = cursor.fetchone()
-         ailecode = usersinfo[6] 
-         if ailecode is not None:
-             name = name + "_" + ailecode
-             result = base64_to_image(plan,name+".jpg")
-             if result:
-              cursor.execute(f"SELECT * FROM families WHERE code = '{ailecode}'", )
-              familyinfo = cursor.fetchone()
-              
-              json_data = json.loads(familyinfo[6])
-              for i in json_data:
-                 if i == name+".jpg":
-                    return {"status" : "False", "error" : "Aynı isimde bina planı eklenemez."}
-              json_data.append(name+".jpg")
-              cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(json_data), ailecode))
-              connection.commit()
-              return {"status" : "True", "message": "Başarılı!"}
-             else:
-              return {"status" : "False" , "error" : "Fotoğraf uygun formatta değil."}
-         else:
-             return {"status" : "False", "error" : "Henüz bir ailede değilsiniz."}       
-      else:
-         return {"status": "False", "error": "Giriş başarısız."}
-   else:
-     return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
+async def addplan(username: str = Form(...),
+                  password: str = Form(...),
+                  name: str = Form(...),
+                  file: UploadFile = File(...)
+                  
+                  ):
+    if username and password and name and file is not None:
+        user = authenticate_user(username, password)
+        if user:
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{user[4]}'", )
+            usersinfo = cursor.fetchone()
+            ailecode = usersinfo[6] 
+            if ailecode is not None:
+                name = name + "_" + ailecode
+                file_path = os.path.join(UPLOAD_FOLDER, name + ".jpg")
+                
+                # Check if the file already exists
+                if os.path.exists(file_path):
+                    return {"status": "False", "error": "Aynı isimde bina planı eklenemez."}
+
+                # Save the image to the plans folder
+                save_image(file, file_path)
+
+                cursor.execute(f"SELECT * FROM families WHERE code = '{ailecode}'", )
+                familyinfo = cursor.fetchone()
+                
+                json_data = json.loads(familyinfo[6])
+                for i in json_data:
+                    if i == name + ".jpg":
+                        return {"status": "False", "error": "Aynı isimde bina planı eklenemez."}
+                json_data.append(name + ".jpg")
+                cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(json_data), ailecode))
+                connection.commit()
+                return {"status": "True", "message": "Başarılı!"}
+            else:
+                return {"status": "False", "error": "Henüz bir ailede değilsiniz."}       
+        else:
+            return {"status": "False", "error": "Giriş başarısız."}
+    else:
+        return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
    
 
      
