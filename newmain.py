@@ -1674,16 +1674,16 @@ def getusers(request: Request):
                 params = {}
 
                 if name:
-                 query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->'name' = :name)"
-                 params["name"] = name.lower().strip()
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE lower(json_extract(value, '$.name')) = :name)"
+                    params["name"] = name.lower().strip()
 
                 if surname:
-                 query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->'surname' = :surname)"
-                 params["surname"] = surname.lower().strip()
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE lower(json_extract(value, '$.surname')) = :surname)"
+                    params["surname"] = surname.lower().strip()
 
                 if tckimlik:
-                 query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->'tc' = :tckimlik)"
-                 params["tckimlik"] = tckimlik
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE lower(json_extract(value, '$.tc')) = :tckimlik)"
+                    params["tckimlik"] = tckimlik
 
 
                 cursor.execute(query, params)
