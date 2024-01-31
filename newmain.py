@@ -1621,6 +1621,8 @@ def giverole(request : Request):
    else:
       return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
 
+
+
 @app.get("/getusers")
 def getusers(request: Request):
     args = request.query_params
@@ -1664,8 +1666,52 @@ def getusers(request: Request):
 
                 userlist = []
                 for i in users:
-                   data = {"name" : i[9] , "surname": i[10] ,"tcnumber": i[11], "kangrup" : i[12],"phone": i[1] , "rehber" : i[2] , "durum" : i[4] , "durumtime" : i[5], "ailecode" : i[6] , "photo" : i[7]}
+                   data = {"name" : i[9] , "surname": i[10] ,"tcnumber": i[11], "kangrup" : i[12],"phone": i[1] , "rehber" : i[2] , "durum" : i[4] , "durumtime" : i[5], "ailecode" : i[6] , "photo" : i[7], "child" : "False"}
                    userlist.append(data)
+
+
+                query = "SELECT families.* FROM families WHERE 1=1"
+                params = {}
+
+                if name:
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->>'name' = :name)"
+                    params["name"] = name.lower().strip()
+
+                if surname:
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->>'surname' = :surname)"
+                    params["surname"] = surname.lower().strip()
+
+                if tckimlik:
+                    query += " AND EXISTS (SELECT 1 FROM json_each(families.childs) WHERE value->>'tc' = :tckimlik)"
+                    params["tckimlik"] = tckimlik
+
+                cursor.execute(query, params)
+                users = cursor.fetchall()
+
+                
+                for row in users:
+                  
+                    childs_data = json.loads(row[5])
+                    
+                   
+                    for child in childs_data:
+                        
+                        if (name and child.get("name", "").lower() != name.lower().strip()) or \
+                           (surname and child.get("surname", "").lower() != surname.lower().strip()) or \
+                           (tckimlik and child.get("tc", "") != tckimlik):
+                            continue
+
+                        data = {
+                            "name": child.get("name", ""),
+                            "surname": child.get("surname", ""),
+                            "birthday": child.get("birthday", ""),
+                            "kan": child.get("kan", ""),
+                            "tc": child.get("tc", ""),
+                            "photo" : child.get("photo", ""),
+                            "child" : "True"
+                            
+                        }
+                        userlist.append(data)
                 return {"status" : "True", "data" : userlist}
             else:
                 return {"status": "False", "error": "Yetkiniz Yok!"}
@@ -1673,7 +1719,7 @@ def getusers(request: Request):
             return {"status": "False", "error": "Kullanıcı adı veya şifre hatalı!"}
     else:
         return {"status": "False", "error": "Gerekli parametreleri giriniz!"}
-
+    
 
 
 
