@@ -1200,10 +1200,13 @@ def leavefamily(request : Request):
              cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
              familylist = cursor.fetchone()
              json_data = json.loads(familylist[3])
-
              data = [item for item in json_data if int(item['tcnumber']) != int(user[7])]
-             cursor.execute('UPDATE families SET users = ? WHERE code = ?', (json.dumps(data), ailecode))
-             cursor.execute('UPDATE usersinfo SET ailecode = ? WHERE phone = ?', (None, user[4]))
+             if len(data) == 0:
+              cursor.execute(f"DELETE FROM families WHERE code = '{ailecode}'")
+              cursor.execute('UPDATE usersinfo SET ailecode = ? WHERE phone = ?', (None, user[4]))
+             else:
+              cursor.execute('UPDATE families SET users = ? WHERE code = ?', (json.dumps(data), ailecode))
+              cursor.execute('UPDATE usersinfo SET ailecode = ? WHERE phone = ?', (None, user[4]))
              connection.commit()
              return {"status" : "True", "message": "Başarılı!"}
          else:
@@ -1746,11 +1749,11 @@ def getfamilies(request : Request):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                
+                # Veritabanındaki tüm adresleri çek
                 cursor.execute("SELECT * FROM families")
                 all_addresses = cursor.fetchall()
 
-               
+                # Girilen adresle en çok kelime eşleşmesi yapan adresi bul
                 max_match_count = 0
                 closest_match = None
 
@@ -1823,7 +1826,42 @@ def getsar(request : Request):
       return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
 
 
+@app.get("/deleteaccount")
+def deleteaccount(request : Request):
+   args = request.query_params
+   username = args.get("email",None)
+   password = args.get("password",None)
+   if username and password != None:
+      user = authenticate_user(username,password)
+      if user:
+         connection = get_db_connection()
+         cursor = connection.cursor()
+         cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{user[4]}'", )
+         usersinfo = cursor.fetchone()
+         ailecode = usersinfo[6]
+         if ailecode is not None:
+             cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
+             familylist = cursor.fetchone()
+             json_data = json.loads(familylist[3])
 
+             data = [item for item in json_data if int(item['tcnumber']) != int(user[7])]
+             if len(data) == 0:
+              cursor.execute(f"DELETE FROM families WHERE code = '{ailecode}'")
+             else:
+              cursor.execute('UPDATE families SET users = ? WHERE code = ?', (json.dumps(data), ailecode))
+              cursor.execute('UPDATE usersinfo SET ailecode = ? WHERE phone = ?', (None, user[4]))
+             
+         cursor.execute(f"DELETE FROM usersinfo WHERE phone = '{user[4]}'")
+         cursor.execute(f"DELETE FROM users WHERE phone = '{user[4]}'")
+         connection.commit()
+        
+         return {"status" : "True", "message": "Başarılı!"}
+         
+      
+      else:
+         return {"status": "False", "error": "Giriş başarısız."}  
+   else:
+      return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}
 
 
 
