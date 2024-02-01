@@ -540,6 +540,7 @@ def login(request: Request):
        if notification is not None:
          connection = get_db_connection()
          cursor = connection.cursor()
+         print(notification)
          cursor.execute('UPDATE usersinfo SET notifications = ? WHERE phone = ?', (notification, user[4]))
          connection.commit()
 
