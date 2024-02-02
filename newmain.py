@@ -1670,7 +1670,7 @@ def getusers(request: Request):
 
                 userlist = []
                 for i in users:
-                   data = {"name" : i[9] , "surname": i[10] ,"tcnumber": i[11], "kangrup" : i[12],"phone": i[1] , "rehber" : i[2] , "durum" : i[4] , "durumtime" : i[5], "ailecode" : i[6] , "photo" : i[7], "child" : "False"}
+                   data = {"name" : i[9] , "surname": i[10] ,"tcnumber": i[11], "kangrup" : i[12],"phone": i[1] , "rehber" : json.loads(i[2]) , "durum" : i[4] , "durumtime" : i[5], "ailecode" : i[6] , "photo" : i[7], "child" : "False"}
                    userlist.append(data)
 
 
