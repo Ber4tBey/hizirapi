@@ -1765,9 +1765,13 @@ def getfamilies(request: Request):
                     # Girilen adresle en çok kelime eşleşmesi yapan tüm adresleri bul
                     matches = []
 
+                    # Adresteki rakamları temizlemek için düzenli ifade (regex) kullan
+                    clean_adres = re.sub(r'\d+', '', adres)
+
                     for family in all_addresses:
                         db_address = family[7]
-                        common_words = set(adres.split()) & set(db_address.split())
+                        db_address_without_numbers = re.sub(r'\d+', '', db_address)
+                        common_words = set(clean_adres.split()) & set(db_address_without_numbers.split())
                         match_count = len(common_words)
 
                         if match_count > 0:
