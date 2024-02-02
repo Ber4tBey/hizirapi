@@ -1728,67 +1728,72 @@ def getusers(request: Request):
 
 
 @app.get("/getfamilies")
-def getfamilies(request : Request):
+def getfamilies(request: Request):
     args = request.query_params
     username = args.get("username", None)
     password = args.get("password", None)
-    adres = args.get("adres",None)
-    code = args.get("code",None)
-    
-    if username and password != None:
-  
-      user = authenticate_user(username,password)
-      if user:
-         if user[6] == "sar":
-            connection = get_db_connection()
-            cursor = connection.cursor()
-            if code:
-               cursor.execute("SELECT * FROM families WHERE code = ?", (code,))
-               familylist = cursor.fetchone()
-               return {"status": "True", "code": code,"data":json.loads(familylist[3]),"name": familylist[4] , "child" : json.loads(familylist[5]),"bina" : familylist[6] , "adres" : familylist[7], "binaname" : familylist[8]}
-            elif adres:
+    adres = args.get("adres", None)
+    code = args.get("code", None)
+
+    if username and password is not None:
+        user = authenticate_user(username, password)
+        if user:
+            if user[6] == "sar":
                 connection = get_db_connection()
                 cursor = connection.cursor()
-
-                # Veritabanındaki tüm adresleri çek
-                cursor.execute("SELECT * FROM families")
-                all_addresses = cursor.fetchall()
-
-                # Girilen adresle en çok kelime eşleşmesi yapan adresi bul
-                max_match_count = 0
-                closest_match = None
-
-                for family in all_addresses:
-                    db_address = family[7]
-                    common_words = set(adres.split()) & set(db_address.split())
-                    match_count = len(common_words)
-
-                    if match_count > max_match_count:
-                        max_match_count = match_count
-                        closest_match = family
-
-                if closest_match:
+                if code:
+                    cursor.execute("SELECT * FROM families WHERE code = ?", (code,))
+                    familylist = cursor.fetchone()
                     return {
                         "status": "True",
-                        "code": closest_match[2],
-                        "data": json.loads(closest_match[3]),
-                        "name": closest_match[4],
-                        "child": json.loads(closest_match[5]),
-                        "bina": closest_match[6],
-                        "adres": closest_match[7],
-                        "binaname": closest_match[8]
+                        "code": code,
+                        "data": json.loads(familylist[3]),
+                        "name": familylist[4],
+                        "child": json.loads(familylist[5]),
+                        "bina": familylist[6],
+                        "adres": familylist[7],
+                        "binaname": familylist[8]
                     }
+                elif adres:
+                    connection = get_db_connection()
+                    cursor = connection.cursor()
+
+                    # Veritabanındaki tüm adresleri çek
+                    cursor.execute("SELECT * FROM families")
+                    all_addresses = cursor.fetchall()
+
+                    # Girilen adresle en çok kelime eşleşmesi yapan tüm adresleri bul
+                    matches = []
+
+                    for family in all_addresses:
+                        db_address = family[7]
+                        common_words = set(adres.split()) & set(db_address.split())
+                        match_count = len(common_words)
+
+                        if match_count > 0:
+                            matches.append({
+                                "status": "True",
+                                "code": family[2],
+                                "data": json.loads(family[3]),
+                                "name": family[4],
+                                "child": json.loads(family[5]),
+                                "bina": family[6],
+                                "adres": family[7],
+                                "binaname": family[8]
+                            })
+
+                    if matches:
+                        return matches
+                    else:
+                        return {"status": "False", "error": "Eşleşme bulunamadı"}
                 else:
-                    return {"status": "False", "error": "Eşleşme bulunamadı"}
+                    return {"status": "False", "error": "Gerekli parametreleri giriniz!"}
             else:
-               return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
-           
-         else:
-            return {"status" : "False" , "error" : "Yetkiniz Yok!"}
-      else:
-         return {"status" : "False", "error" : "Kullanıcı adı veya şifre hatalı!"}
+                return {"status": "False", "error": "Yetkiniz Yok!"}
+        else:
+            return {"status": "False", "error": "Kullanıcı adı veya şifre hatalı!"}
     else:
-      return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
+        return {"status": "False", "error": "Gerekli parametreleri giriniz!"}
     
 
 @app.get("/getsar")
