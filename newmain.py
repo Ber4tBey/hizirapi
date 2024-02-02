@@ -1765,15 +1765,19 @@ def getfamilies(request: Request):
                     # Girilen adresle eşleşen adresleri bul
                     matches = []
 
+                    # Girilen adresi kelimelere ayır
+                    input_words = set(adres.split())
+
                     for family in all_addresses:
                         db_address = family[7]
                         
-                        # Adresteki rakamları temizle
-                        clean_adres_input = re.sub(r'\d+', '', adres)
-                        clean_adres_db = re.sub(r'\d+', '', db_address)
-                        
-                        # Sayıları çıkarmış temiz adreslerin karşılaştırması
-                        if clean_adres_input == clean_adres_db:
+                        # Veritabanındaki adresi kelimelere ayır
+                        db_words = set(db_address.split())
+
+                        # İki kümenin kesişimini kontrol et
+                        common_words = input_words & db_words
+
+                        if common_words:
                             matches.append({
                                 "status": "True",
                                 "code": family[2],
