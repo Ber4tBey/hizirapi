@@ -1728,79 +1728,72 @@ def getusers(request: Request):
 
 
 @app.get("/getfamilies")
-def getfamilies(request: Request):
+def getfamilies(request : Request):
     args = request.query_params
     username = args.get("username", None)
     password = args.get("password", None)
-    adres = args.get("adres", None)
-    code = args.get("code", None)
+    adres = args.get("adres",None)
+    code = args.get("code",None)
 
-    if username and password is not None:
-        user = authenticate_user(username, password)
-        if user:
-            if user[6] == "sar":
+    if username and password != None:
+
+      user = authenticate_user(username,password)
+      if user:
+         if user[6] == "sar":
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            if code:
+               cursor.execute("SELECT * FROM families WHERE code = ?", (code,))
+               familylist = cursor.fetchone()
+               return {"status": "True", "code": code,"data":json.loads(familylist[3]),"name": familylist[4] , "child" : json.loads(familylist[5]),"bina" : familylist[6] , "adres" : familylist[7], "binaname" : familylist[8]}
+            elif adres:
                 connection = get_db_connection()
                 cursor = connection.cursor()
-                if code:
-                    cursor.execute("SELECT * FROM families WHERE code = ?", (code,))
-                    familylist = cursor.fetchone()
-                    return {
+
+
+                cursor.execute("SELECT * FROM families")
+                all_addresses = cursor.fetchall()
+
+
+                
+                result = []
+                for family in all_addresses:
+                    db_address = family[7]
+                    db_address = db_address.replace(",","")
+                    desen = re.compile(r'\b(sokak|SK\.)\s*\d+\b', re.IGNORECASE)
+                    db_address = re.sub(desen, '', db_address)
+                    db_address = db_address.replace("mahallesi","")
+
+                    adres = adres
+                    adres = adres.replace(",","")
+                    desen = re.compile(r'\b(sokak|SK\.)\s*\d+\b', re.IGNORECASE)
+                    adres = re.sub(desen, '', adres)
+                    adres = adres.replace("mahallesi","")
+                    if adres == db_address:
+                       result.append({
                         "status": "True",
-                        "code": code,
-                        "data": json.loads(familylist[3]),
-                        "name": familylist[4],
-                        "child": json.loads(familylist[5]),
-                        "bina": familylist[6],
-                        "adres": familylist[7],
-                        "binaname": familylist[8]
-                    }
-                elif adres:
-                    connection = get_db_connection()
-                    cursor = connection.cursor()
+                        "code": family[2],
+                        "data": json.loads(family[3]),
+                        "name": family[4],
+                        "child": json.loads(family[5]),
+                        "bina": family[6],
+                        "adres": family[7],
+                        "binaname": family[8]
+                    })
 
-                    # Veritabanındaki tüm adresleri çek
-                    cursor.execute("SELECT * FROM families")
-                    all_addresses = cursor.fetchall()
-
-                    # Girilen adresle eşleşen adresleri bul
-                    matches = []
-
-                    # Girilen adresi kelimelere ayır
-                    input_words = set(adres.split())
-
-                    for family in all_addresses:
-                        db_address = family[7]
-                        
-                        # Veritabanındaki adresi kelimelere ayır
-                        db_words = set(db_address.split())
-
-                        # İki kümenin kesişimini kontrol et
-                        common_words = input_words & db_words
-
-                        if common_words:
-                            matches.append({
-                                "status": "True",
-                                "code": family[2],
-                                "data": json.loads(family[3]),
-                                "name": family[4],
-                                "child": json.loads(family[5]),
-                                "bina": family[6],
-                                "adres": family[7],
-                                "binaname": family[8]
-                            })
-
-                    if matches:
-                        return matches
-                    else:
-                        return {"status": "False", "error": "Eşleşme bulunamadı"}
-                else:
-                    return {"status": "False", "error": "Gerekli parametreleri giriniz!"}
+                if len(result) == 0 :
+                   return {"status" : "False" , "error" : "Bulunamadı."}
+                return {"status": "True" , "data" : result}
+    
             else:
-                return {"status": "False", "error": "Yetkiniz Yok!"}
-        else:
-            return {"status": "False", "error": "Kullanıcı adı veya şifre hatalı!"}
+               return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
+
+         else:
+            return {"status" : "False" , "error" : "Yetkiniz Yok!"}
+      else:
+         return {"status" : "False", "error" : "Kullanıcı adı veya şifre hatalı!"}
     else:
-        return {"status": "False", "error": "Gerekli parametreleri giriniz!"}
+      return {"stauts": "False", "error" : "Gerekli parametreleri giriniz!"}
     
 
 @app.get("/getsar")
