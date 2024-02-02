@@ -1762,19 +1762,18 @@ def getfamilies(request: Request):
                     cursor.execute("SELECT * FROM families")
                     all_addresses = cursor.fetchall()
 
-                    # Girilen adresle en çok kelime eşleşmesi yapan tüm adresleri bul
+                    # Girilen adresle eşleşen adresleri bul
                     matches = []
-
-                    # Adresteki rakamları temizlemek için düzenli ifade (regex) kullan
-                    clean_adres = re.sub(r'\d+', '', adres)
 
                     for family in all_addresses:
                         db_address = family[7]
-                        db_address_without_numbers = re.sub(r'\d+', '', db_address)
-                        common_words = set(clean_adres.split()) & set(db_address_without_numbers.split())
-                        match_count = len(common_words)
-
-                        if match_count > 0:
+                        
+                        # Adresteki rakamları temizle
+                        clean_adres_input = re.sub(r'\d+', '', adres)
+                        clean_adres_db = re.sub(r'\d+', '', db_address)
+                        
+                        # Sayıları çıkarmış temiz adreslerin karşılaştırması
+                        if clean_adres_input == clean_adres_db:
                             matches.append({
                                 "status": "True",
                                 "code": family[2],
