@@ -1513,14 +1513,21 @@ def addplan(request: Request):
          usersinfo = cursor.fetchone()
          ailecode = usersinfo[6] 
          if ailecode is not None:
-             name = name + "_" + ailecode
+             name = name + "_" + ailecode + ".jpg"
              cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
              familylist = cursor.fetchone()
              json_data = json.loads(familylist[6])
-             my_list = [item for item in json_data if name in json_data]
+             print(json_data)
+             my_list = []
+             for i in json_data:
+                if i == name:
+                   continue
+                else:
+                   my_list.append(i)
+
              print(my_list)
-             if os.path.exists("./plans/"+name+".jpg"):     
-              os.remove("./plans/"+name+".jpg")
+             if os.path.exists("./plans/"+name):     
+              os.remove("./plans/"+name)
              cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(my_list), ailecode))
              connection.commit()
              return {"status" : "True", "message": "Başarılı!"}
