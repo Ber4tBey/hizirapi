@@ -1252,19 +1252,36 @@ def deletefamily(request: Request):
    else:
      return {"status": "False", "error": "Lütfen gerekli parametreleri giriniz."}   
 
+
+UPLOADED_FOLDER = "childs/"  
+
+def save_image(file, file_path):
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+
+@app.get("/childphoto/{filename}")
+async def read_file(filename: str):
+    file_path = os.path.join(UPLOADED_FOLDER, filename)
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    else:
+        # Return a default image if the file doesn't exist
+        default_image_path = os.path.join(UPLOADED_FOLDER, "default.jpeg")
+        return FileResponse(default_image_path, media_type="image/jpeg")
+    
+
 @app.post("/addchild")
-async def addchild(request: Request):
-    data = await request.json()
-    photo = data.get("photo", None)
-    email = data.get("email", None)
-    password = data.get("password", None)
-    tcnumber = data.get("tc", None)
-    name = data.get("name", None)
-    surname = data.get("surname", None)
-    birthday = data.get("birthday", None)
-    kangrup = data.get("kan",None)
-
-
+async def addplan(
+                  password: str = Form(...),
+                  email: str = Form(...),
+                  tcnumber: str = Form(...),
+                  name: str = Form(...),
+                  surname: str = Form(...),
+                  birthday: str = Form(...),
+                  kangrup: str = Form(...),
+                  file: UploadFile = File(...)):
     if email and password and tcnumber and name and surname and birthday and kangrup is not None:
         user = authenticate_user(email, password)
         if user:
@@ -1297,8 +1314,19 @@ async def addchild(request: Request):
                 kanlar = ["Arh+","Arh-","Brh+","Brh-","ABrh+","ABrh-","0rh+","0rh-"]
                 if kangrup not in kanlar:
                  return {"status" : "False" , "error" : "Lütfen geçerli kan grubu giriniz. "}
+                
+                random_number = generate_random_number()
+                nam = name + "_" + random_number +family_code
+                file_path = os.path.join(UPLOADED_FOLDER, nam + ".jpg")
+                
+               
+                if os.path.exists(file_path):
+                    os.remove(file_path)
 
-                jsonn_veri = {"tc": tcnumber, "name": name, "surname": surname, "birthday": birthday, "photo": photo, "kan" : kangrup}
+              
+                save_image(file, file_path)
+
+                jsonn_veri = {"tc": tcnumber, "name": name, "surname": surname, "birthday": birthday, "photo": nam+".jpg", "kan" : kangrup}
                 json_data.append(jsonn_veri)
                 cursor.execute('UPDATE families SET childs = ? WHERE code = ?', (json.dumps(json_data), family_code))
                 connection.commit()
