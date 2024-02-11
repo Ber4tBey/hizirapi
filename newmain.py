@@ -514,16 +514,23 @@ def is_image(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 
+UPLOADE_FOLDER = "uploads"
+CHILDS_FOLDER = "childs"
+
 @app.get("/profilephotos/{filename}")
 async def read_file(filename: str):
-    file_path = os.path.join(upload_folder, filename)
+    upload_file_path = os.path.join(UPLOADE_FOLDER, filename)
+    childs_file_path = os.path.join(CHILDS_FOLDER, filename)
 
-    # Check if the file exists
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/jpeg")
+    
+    if os.path.exists(upload_file_path):
+        return FileResponse(upload_file_path, media_type="image/jpeg")
+    
+    elif os.path.exists(childs_file_path):
+        return FileResponse(childs_file_path, media_type="image/jpeg")
     else:
-        # Return a default image if the file doesn't exist
-        default_image_path = os.path.join(upload_folder, "default.jpeg")
+       
+        default_image_path = os.path.join(UPLOAD_FOLDER, "default.jpeg")
         return FileResponse(default_image_path, media_type="image/jpeg")
 
 @app.get("/login")
@@ -1259,17 +1266,7 @@ def save_image(file, file_path):
     with open(file_path, "wb") as f:
         f.write(file.file.read())
 
-@app.get("/childphoto/{filename}")
-async def read_file(filename: str):
-    file_path = os.path.join(UPLOADED_FOLDER, filename)
 
-    # Check if the file exists
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/jpeg")
-    else:
-        # Return a default image if the file doesn't exist
-        default_image_path = os.path.join(UPLOADED_FOLDER, "default.jpeg")
-        return FileResponse(default_image_path, media_type="image/jpeg")
     
 
 @app.post("/addchild")
