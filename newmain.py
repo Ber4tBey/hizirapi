@@ -62,7 +62,7 @@ def send_push_notification(expo_push_token, title, body):
     return response.json()
 
 
-
+import datetime
 def getKandilliData():
     try:
         array = []
@@ -89,7 +89,7 @@ def getKandilliData():
                 json_data = json.dumps({
                     "id": index+1,
                     "date": Args[0]+" "+Args[1],
-                    "timestamp": int(datetime.datetime.strptime(Args[0]+" "+Args[1], "%Y.%m.%d %H:%M:%S").timestamp()),
+                    "timestamp": int(datetime.strptime(Args[0]+" "+Args[1], "%Y.%m.%d %H:%M:%S").timestamp()),
                     "latitude": float(Args[2]),
                     "longitude": float(Args[3]),
                     "depth": float(Args[4]),
@@ -103,15 +103,24 @@ def getKandilliData():
                     "title": location.strip(),
                     "attribute": element.split(location)[1].split()[0]
                 }, sort_keys=False)
-
-                array.append(json.loads(json_data))
+                
+                
+                current_date = datetime.now().strftime("%Y.%m.%d")
+                earthquake_date = Args[0]
+                if earthquake_date == current_date:
+                    array.append(json.loads(json_data))
+                else:
+                    
+                    previous_day = (datetime.strptime(earthquake_date, "%Y.%m.%d") - timedelta(days=1)).strftime("%Y.%m.%d")
+                    print(previous_day)
+                    if previous_day == current_date:
+                        array.append(json.loads(json_data))
             return array
         else:
             return []
     except Exception as e:
         print(f"Hata: {e}")
         return []
-
 
 def tc_kimlik_dogrula(value):
     value = str(value)
@@ -1927,6 +1936,9 @@ def get_sokaklar(mahalle_key: int):
 def getmessage():
    return getKandilliData()
 
+from datetime import datetime, timedelta
+
+
 @app.get("/enyüksek")
 def getmessagee():
     data = getKandilliData()
@@ -1942,6 +1954,7 @@ def getmessagee():
     min_index = mw_values.index(min_mw)
 
     return {"max": data[max_index], "min": data[min_index]}
+
 
 import random
 def generate_random_code():
