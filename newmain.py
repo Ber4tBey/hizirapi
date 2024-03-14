@@ -112,7 +112,7 @@ def getKandilliData():
                 else:
                     
                     previous_day = (datetime.strptime(earthquake_date, "%Y.%m.%d") - timedelta(days=1)).strftime("%Y.%m.%d")
-                    print(previous_day)
+                  
                     if previous_day == current_date:
                         array.append(json.loads(json_data))
             return array
@@ -556,7 +556,7 @@ def login(request: Request):
        if notification is not None:
          connection = get_db_connection()
          cursor = connection.cursor()
-         print(notification)
+         
          cursor.execute('UPDATE usersinfo SET notifications = ? WHERE phone = ?', (notification, user[4]))
          connection.commit()
 
@@ -835,6 +835,7 @@ async def get_contact(request: Request):
 
             
             for i in phone:
+                    print(i)
                     iphone = phoneduzelt(i['phone'])
                     cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{iphone}'")
                     check = cursor.fetchone()
@@ -933,7 +934,7 @@ def setstatus(request : Request):
                     elif status == "danger":
                        send_push_notification(i,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı tehlikede olabilir lütfen sakinliğinizi koruyunuz.")
 
-                mevcut_zaman = datetime.datetime.now()
+                mevcut_zaman = datetime.now()
                 formatli_zaman = mevcut_zaman.strftime("%Y-%m-%d:%H-%M")
                 cursor.execute('UPDATE usersinfo SET durum = ? WHERE phone = ?', (status, user[4]))
                 cursor.execute('UPDATE usersinfo SET durumtime = ? WHERE phone = ?', (str(formatli_zaman), user[4]))
@@ -1517,7 +1518,7 @@ def addplan(request: Request):
              cursor.execute("SELECT * FROM families WHERE code = ?", (ailecode,))
              familylist = cursor.fetchone()
              json_data = json.loads(familylist[6])
-             print(json_data)
+            
              my_list = []
              for i in json_data:
                 if i == name:
@@ -1525,7 +1526,7 @@ def addplan(request: Request):
                 else:
                    my_list.append(i)
 
-             print(my_list)
+            
              if os.path.exists("./plans/"+name):     
               os.remove("./plans/"+name)
              cursor.execute('UPDATE families SET binaplan = ? WHERE code = ?', (json.dumps(my_list), ailecode))
