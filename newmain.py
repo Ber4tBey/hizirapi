@@ -56,6 +56,7 @@ def send_push_notifications(expo_push_tokens, title, body, sound=None):
     }
 
     response = requests.post(expo_push_endpoint, json=data)
+    
     return response.json()
 
 
@@ -928,7 +929,7 @@ def setstatus(request : Request):
            if i['notification'] in notification_liste:
                 continue
            notification_liste.append(i['notification'])
-        print(notification_liste)
+       
        except Exception as e:
         print(e)
         pass
@@ -936,7 +937,7 @@ def setstatus(request : Request):
 
                 if notification_liste:
                  if type(notification_liste) == list:
-
+                    notification_liste = list(filter(None, notification_liste))
                     if status == "help":
                      send_push_notifications(notification_liste,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı enkaz altında olabilir lütfen sakinliğinizi koruyunuz.")
                     
