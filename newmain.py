@@ -45,13 +45,14 @@ def is_base64_image(data):
         return False
 
 
-def send_push_notifications(expo_push_tokens, title, body):
+def send_push_notifications(expo_push_tokens, title, body, sound=None):
     expo_push_endpoint = 'https://exp.host/--/api/v2/push/send'
 
     data = {
         'to': expo_push_tokens,
         'title': title,
         'body': body,
+        'sound': 'default'  
     }
 
     response = requests.post(expo_push_endpoint, json=data)
