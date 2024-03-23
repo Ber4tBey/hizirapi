@@ -928,7 +928,9 @@ def setstatus(request : Request):
            if i['notification'] in notification_liste:
                 continue
            notification_liste.append(i['notification'])
-       except:
+        print(notification_liste)
+       except Exception as e:
+        print(e)
         pass
        if status == "help" or status == "nice" or status == "empty" or status == "danger":
 
