@@ -22,7 +22,6 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import io
 
 
 def generate_family_code():
@@ -33,16 +32,16 @@ def generate_family_code():
 
 def is_base64_image(data):
     try:
-        # Base64 verisini çözerek bir bayt nesnesi elde et
+        
         decoded_data = base64.b64decode(data)
 
-        # BytesIO kullanarak bayt nesnesini bir resim olarak yükle
+        
         image = Image.open(BytesIO(decoded_data))
 
-        # Resim başarıyla yüklendiyse, base64 verisi bir resimdir
+        
         return True
     except Exception as e:
-        # Hata oluştuysa, base64 verisi bir resim değildir
+        
         return False
 
 
@@ -301,28 +300,29 @@ def init_db():
 
 
 def beniyiyimclear():
-   
-    connection = get_db_connection()
+    # Veritabanı bağlantısını al
+    connection = sqlite3.connect("veritabani.db")
     cursor = connection.cursor()
-    cursor.execute("SELECT * FROM usersinfo")
-    veriler = cursor.fetchall()
+    
+    while True:
+        cursor.execute("SELECT * FROM usersinfo")
+        veriler = cursor.fetchall()
 
-    for veri in veriler:
-      try:
-       veri_mevcut_zaman = veri[5]
-       mevcut_saat = veri_mevcut_zaman.split(":")[1].replace("-", ":")
-       mevcut_zaman = datetime.datetime.now()
-       formatli_zaman = mevcut_zaman.strftime("%Y-%m-%d:%H-%M")
-       mevcut_saat = formatli_zaman.split(":")[1].replace("-", ":")
-       mevcut_tarih = formatli_zaman.split(":")[0]
-       mevcut_tarih_dt = datetime.datetime.strptime(mevcut_tarih, "%Y-%m-%d")
-       bir_gun_sonrasi = mevcut_tarih_dt + datetime.timedelta(days=1)
-       if mevcut_saat == mevcut_saat and bir_gun_sonrasi.strftime("%Y-%m-%d") == mevcut_tarih:
-        cursor.execute('UPDATE usersinfo SET durum = ? WHERE phone = ?', ("empty", veri[4]))
-        connection.commit()
-      except:
-        pass
-
+        for veri in veriler:
+            try:
+                veri_mevcut_zaman = veri[5]
+                mevcut_saat = veri_mevcut_zaman.split(":")[1].replace("-", ":")
+                mevcut_zaman = datetime.datetime.now()
+                formatli_zaman = mevcut_zaman.strftime("%Y-%m-%d:%H-%M")
+                mevcut_saat = formatli_zaman.split(":")[1].replace("-", ":")
+                mevcut_tarih = formatli_zaman.split(":")[0]
+                mevcut_tarih_dt = datetime.datetime.strptime(mevcut_tarih, "%Y-%m-%d")
+                bir_gun_sonrasi = mevcut_tarih_dt + datetime.timedelta(seconds=20)  
+                if mevcut_saat == mevcut_saat and bir_gun_sonrasi.strftime("%Y-%m-%d") == mevcut_tarih:
+                    cursor.execute('UPDATE usersinfo SET durum = ? WHERE phone = ?', ("empty", veri[4]))
+                    connection.commit()
+            except Exception as e:
+                print("Hata:", e)
 
 
 
@@ -835,7 +835,7 @@ async def get_contact(request: Request):
 
             
             for i in phone:
-                    print(i)
+                    
                     iphone = phoneduzelt(i['phone'])
                     cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{iphone}'")
                     check = cursor.fetchone()
@@ -843,7 +843,7 @@ async def get_contact(request: Request):
                     if check:
                         # Eğer aynı telefon numarası daha önce eklenmemişse listeye ekle
                         if iphone not in [item['phone'] for item in phonenumbers]:
-                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "fullname" : check[9] + " " + check[10]})
+                            phonenumbers.append({"name": i['name'], "phone": iphone , "status" : check[4], "photo" : check[7] , "fullname" : check[9] + " " + check[10], "notification": check[8]})
 
                 # Tüm kayıtları tek seferde güncelle
             cursor.execute('UPDATE usersinfo SET rehber = ? WHERE phone = ?', (json.dumps(phonenumbers), user[4]))
@@ -918,6 +918,7 @@ def setstatus(request : Request):
        users = cursor.fetchone()
        loaded = users[2]
        notification_liste = []
+       loaded = json.loads(loaded)
        try:  
         for i in loaded:
           notification_liste.append(i['notification'])
@@ -1972,5 +1973,5 @@ def generate_random_code():
 
 if __name__ == "__main__":
     import uvicorn
-
+ 
     uvicorn.run(app, host="0.0.0.0", port=8000 )
