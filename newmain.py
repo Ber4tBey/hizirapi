@@ -913,13 +913,17 @@ def setstatus(request : Request):
        connection = get_db_connection()
        cursor = connection.cursor()
        cursor.execute(f"SELECT * FROM usersinfo WHERE phone = '{user[4]}'", )
+       
        users = cursor.fetchone()
+       
        loaded = users[2]
        notification_liste = []
        loaded = json.loads(loaded)
       
        try:  
         for i in loaded:
+           if i['notification'] == users[8]:
+              continue
            if i['notification'] in notification_liste:
                 continue
            notification_liste.append(i['notification'])
