@@ -45,20 +45,18 @@ def is_base64_image(data):
         return False
 
 
-expo_push_endpoint = 'https://exp.host/--/api/v2/push/send'
-expo_receipts_endpoint = 'https://exp.host/--/api/v2/push/getReceipts'
+def send_push_notifications(expo_push_tokens, title, body):
+    expo_push_endpoint = 'https://exp.host/--/api/v2/push/send'
 
-
-
-def send_push_notification(expo_push_token, title, body):
     data = {
-        'to': expo_push_token,
+        'to': expo_push_tokens,
         'title': title,
         'body': body,
     }
 
     response = requests.post(expo_push_endpoint, json=data)
     return response.json()
+
 
 
 import datetime
@@ -919,10 +917,12 @@ def setstatus(request : Request):
        loaded = users[2]
        notification_liste = []
        loaded = json.loads(loaded)
-       sended_list = []
+      
        try:  
         for i in loaded:
-          notification_liste.append(i['notification'])
+           if i['notification'] in notification_liste:
+                continue
+           notification_liste.append(i['notification'])
        except:
         pass
        if status == "help" or status == "nice" or status == "empty" or status == "danger":
@@ -930,15 +930,12 @@ def setstatus(request : Request):
                 if notification_liste:
                  if type(notification_liste) == list:
 
-                   for i in notification_liste:
-                    if sended_list in i:
-                       continue
                     if status == "help":
-                     send_push_notification(i,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı enkaz altında olabilir lütfen sakinliğinizi koruyunuz.")
-                     sended_list.append(i)
+                     send_push_notifications(notification_liste,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı enkaz altında olabilir lütfen sakinliğinizi koruyunuz.")
+                    
                     elif status == "danger":
-                       send_push_notification(i,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı tehlikede olabilir lütfen sakinliğinizi koruyunuz.")
-                       sended_list.append(i)
+                       send_push_notifications(notification_liste,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı tehlikede olabilir lütfen sakinliğinizi koruyunuz.")
+                   
 
                 mevcut_zaman = datetime.now()
                 formatli_zaman = mevcut_zaman.strftime("%Y-%m-%d:%H-%M")
