@@ -919,6 +919,7 @@ def setstatus(request : Request):
        loaded = users[2]
        notification_liste = []
        loaded = json.loads(loaded)
+       sended_list = []
        try:  
         for i in loaded:
           notification_liste.append(i['notification'])
@@ -930,10 +931,14 @@ def setstatus(request : Request):
                  if type(notification_liste) == list:
 
                    for i in notification_liste:
+                    if sended_list in i:
+                       continue
                     if status == "help":
                      send_push_notification(i,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı enkaz altında olabilir lütfen sakinliğinizi koruyunuz.")
+                     sended_list.append(i)
                     elif status == "danger":
                        send_push_notification(i,"❗ACİL DURUM UYARISI❗",user[1] + " " + user[2] + " " + "adlı kullanıcı tehlikede olabilir lütfen sakinliğinizi koruyunuz.")
+                       sended_list.append(i)
 
                 mevcut_zaman = datetime.now()
                 formatli_zaman = mevcut_zaman.strftime("%Y-%m-%d:%H-%M")
